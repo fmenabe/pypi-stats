@@ -1,0 +1,9 @@
+pyyaml
+yamlordereddictloader
+bigquery-python
+git+https://github.com/fmenabe/python-clg
+git+https://github.com/fmenabe/python-clg-conf
+git+https://github.com/fmenabe/python-clg-logger
+git+https://github.com/fmenabe/python-clg-spinner
+namedlist
+git+https://github.com/fmenabe/python-clg-table
