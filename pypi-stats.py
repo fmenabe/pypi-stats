@@ -83,15 +83,15 @@ groups:
             short: p
             action: store_true
             help: Page result.
-          save:
-            short: s
+          output_file:
+            short: o
             metavar: PATH
             help: Save output in a file.
 
   - title: Arguments
     args:
       packages:
-        nargs: '+'
+        nargs: '*'
         metavar: package
         help: Packages to print downloads.
 """
@@ -139,16 +139,26 @@ def main():
     if args.file:
         stats = json.load(open(args.file))
     else:
+        if not args.packages:
+            clg.cmd.parser.error('the following arguments are required: package')
         with spinner.start():
             data = retrieve_data()
             stats = parse_data(data)
 
-    if args.raw:
-        print(json.dumps(data, indent=2))
-    elif args.format == 'json':
-        print(json.dumps(stats, indent=2))
-    else:
+    if args.format == 'text':
         print_table(stats)
+        sys.exit(0)
+
+    if args.raw:
+        output = json.dumps(data, indent=2)
+    elif args.format == 'json':
+        output = json.dumps(stats, indent=2)
+
+    if args.output_file:
+        with open(args.output_file, 'w') as fhandler:
+            fhandler.write(output)
+    else:
+        print(output)
 
 def retrieve_data():
     spinner.info('authenticating')
