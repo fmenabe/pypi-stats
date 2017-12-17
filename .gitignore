@@ -1,0 +1,8 @@
+# Virtualenvs.
+env*
+
+# Byte-compiled python files.
+*.pyc
+
+# Ignore vim temporary files.
+*.swp
