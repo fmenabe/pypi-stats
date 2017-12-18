@@ -13,9 +13,10 @@ import bigquery
 from datetime import date, datetime, timedelta
 
 CMD_CONFIG = """
-help: Simple tool for printing PyPI packages downloads of packages.
-description: Simple tool for printing PyPI packages downloads of packages.
+help: Simple tool for printing PyPI packages downloads.
+description: Simple tool for printing PyPI packages downloads.
 add_help: false
+print_help: true
 
 groups:
   - title: Common option
@@ -95,7 +96,6 @@ groups:
         metavar: package
         help: Packages to print downloads.
 """
-
 
 DAY = date.today()
 WEEK = DAY - timedelta(days=DAY.weekday())
