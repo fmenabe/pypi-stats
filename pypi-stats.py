@@ -68,15 +68,13 @@ groups:
       The default is to print an ACSII table with the downloads by packages and versions.
 
     options:
-      raw:
-        short: r
-        action: store_true
-        help: Print raw statistics from BigQuery in JSON.
       format:
         short: f
-        choices: [text, json]
+        choices: [text, json, raw]
         default: 'text'
-        help: "Output format (default: __DEFAULT__)."
+        help: |
+            Output format (default: __DEFAULT__). 'json' format return statistics in
+            JSON and 'raw' format return raw data from BigQuery in JSON.
 
     exclusive_groups:
       - options:
@@ -149,11 +147,10 @@ def main():
         print_table(stats)
         sys.exit(0)
 
-    if args.raw:
-        output = json.dumps(data, indent=2)
-    elif args.format == 'json':
+    if args.format == 'json':
         output = json.dumps(stats, indent=2)
-
+    elif args.format == 'raw':
+        output = json.dumps(data, indent=2)
     if args.output_file:
         with open(args.output_file, 'w') as fhandler:
             fhandler.write(output)
@@ -180,60 +177,57 @@ def retrieve_data():
             return bigquery_client.get_query_rows(job_id)
 
 def parse_data(data):
+    stats_fields = ['day', 'week', 'month']
+    if args.all:
+        stats_fields.extend(('year', 'all'))
+    elif args.year:
+        stats_fields.append('year')
+
     stats = {}
     for row in data:
         cur_date = date(*map(int, row['day'].split('-')))
         project = row['file_project']
         version = row['file_version']
         downloads = row['downloads']
-        init_state = {'day': 0, 'week': 0, 'month': 0, 'year': 0, 'all': 0}
-        stats.setdefault(project, {}).setdefault(version, init_state)
 
-        for stat in ('day', 'week', 'month', 'year', 'all'):
+        stats.setdefault(project, {}).setdefault(version, {})
+        for stat in stats_fields:
             base_date = getattr(sys.modules[__name__], stat.upper())
             if cur_date >= base_date:
+                stats[project][version].setdefault(stat, 0)
                 stats[project][version][stat] += downloads
 
     return stats
 
 def print_table(stats):
-    columns_index = None if args.all else -1 if args.year else -2
-    nb_columns = len(COLUMNS) - (0 if args.all else 1 if args.year else 2)
+    # Ugly way to have the number of stats columns from data by randomly picking
+    # stats of a project and a version.
+    random_stat = (stats[ next(iter(stats.keys())) ]
+                        [ next(iter(stats[ next(iter(stats.keys())) ].keys())) ])
+    nb_columns = 2 + len(random_stat)
 
     output = init_table(args)
     output.append(Row(*COLUMNS[:nb_columns]))
 
     for project, versions in sorted(stats.items()):
-        day_stats, week_stats, month_stats, year_stats, all_stats = 0, 0, 0, 0, 0
+        project_stats = {}
         row = [[] for i in range(0, nb_columns)]
         for version, stats in reversed(sorted(versions.items())):
             row[0].append(project)
             row[1].append(version)
-            row[2].append(stats['day'] or '-')
-            row[3].append(stats['week'] or '-')
-            row[4].append(stats['month'] or '-')
-            if args.all:
-                row[5].append(stats['year'] or '-')
-                row[6].append(stats['all'] or '-')
-            elif args.year:
-                row[5].append(stats['year'] or '-')
 
-            day_stats += stats['day']
-            week_stats += stats['week']
-            month_stats += stats['month']
-            year_stats += stats['year']
-            all_stats += stats['all']
+            for idx, stat in enumerate(('day', 'week', 'month', 'year', 'all')):
+                if stat not in stats:
+                    continue
+                row[2+idx].append(stats[stat] or '-')
+                project_stats.setdefault(stat, 0)
+                project_stats[stat] += stats[stat]
 
         row[0].append(project)
         row[1].append('*')
-        row[2].append(day_stats)
-        row[3].append(week_stats)
-        row[4].append(month_stats)
-        if args.all:
-            row[5].append(year_stats)
-            row[6].append(all_stats)
-        elif args.year:
-            row[5].append(year_stats)
+        for idx, stat in enumerate(('day', 'week', 'month', 'year', 'all')):
+            if stat in project_stats:
+                row[2+idx].append(project_stats[stat] or '-')
         output.append(Row(*[Cell(value) for value in row]))
     output.flush()
 
