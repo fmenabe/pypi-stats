@@ -4,7 +4,6 @@
 import yaml
 import yamlordereddictloader
 import clg
-import clg.conf as conf
 import clg.spinner as spinner
 from clg.table import init as init_table, Row, Cell
 import sys
@@ -193,8 +192,8 @@ def parse_data(data):
         stats.setdefault(project, {}).setdefault(version, {})
         for stat in stats_fields:
             base_date = getattr(sys.modules[__name__], stat.upper())
+            stats[project][version].setdefault(stat, 0)
             if cur_date >= base_date:
-                stats[project][version].setdefault(stat, 0)
                 stats[project][version][stat] += downloads
 
     return stats
